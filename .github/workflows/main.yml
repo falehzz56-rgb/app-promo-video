@@ -1,0 +1,36 @@
+name: Build App Promo Video
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  render-video:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Generate 25s App Promo Video
+        run: |
+          ffmpeg -y \
+          -loop 1 -t 8 -i 01-home.png \
+          -loop 1 -t 8 -i 02-governorates.png \
+          -loop 1 -t 9 -i 03-trades.png \
+          -filter_complex "\
+          [0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0f172a,zoompan=z='min(zoom+0.0008,1.15)':d=240:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920,setsar=1[v0]; \
+          [1:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0f172a,zoompan=z='min(zoom+0.0008,1.15)':d=240:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920,setsar=1[v1]; \
+          [2:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0f172a,zoompan=z='min(zoom+0.0008,1.15)':d=270:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920,setsar=1[v2]; \
+          [v0][v1]xfade=transition=slideleft:duration=1:offset=7[v01]; \
+          [v01][v2]xfade=transition=slideleft:duration=1:offset=14[outv]" \
+          -map "[outv]" -c:v libx264 -pix_fmt yuv420p -r 30 promo-video.mp4
+
+      - name: Upload Finished Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: App-Promo-Video-MP4
+          path: promo-video.mp4
